@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CompanyAnalysisForm } from '@/components/CompanyAnalysisForm';
 import { AnalysisProgress } from '@/components/AnalysisProgress';
 import { ResultsDashboard } from '@/components/ResultsDashboard';
@@ -6,6 +6,7 @@ import { AssetGeneration } from '@/components/AssetGeneration';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Brain, Target, TrendingUp, Zap } from 'lucide-react';
+import { useSession } from '@/hooks/useSession';
 
 export type AppState = 'input' | 'analyzing' | 'results' | 'generating';
 
@@ -28,6 +29,31 @@ const Index = () => {
   const [appState, setAppState] = useState<AppState>('input');
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
+  
+  const { user, sessionLoaded, saveSession, loadSession, clearSession } = useSession();
+
+  // Restore session when user is loaded
+  useEffect(() => {
+    if (sessionLoaded && user) {
+      const session = loadSession();
+      if (session) {
+        if (session.companyData) setCompanyData(session.companyData);
+        if (session.analysisData) setAnalysisData(session.analysisData);
+        if (session.appState) setAppState(session.appState as AppState);
+      }
+    }
+  }, [sessionLoaded, user]);
+
+  // Save session whenever state changes
+  useEffect(() => {
+    if (sessionLoaded && user) {
+      saveSession({
+        appState,
+        companyData,
+        analysisData
+      });
+    }
+  }, [appState, companyData, analysisData, sessionLoaded, user]);
 
   const handleAnalysisStart = (data: CompanyData) => {
     setCompanyData(data);
@@ -47,6 +73,7 @@ const Index = () => {
     setAppState('input');
     setCompanyData(null);
     setAnalysisData(null);
+    clearSession();
   };
 
   return (
@@ -65,10 +92,15 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className="bg-green-100 text-green-700">
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                 <Zap className="w-3 h-3 mr-1" />
-                Hackathon Ready
+                Enterprise Ready
               </Badge>
+              {user && (
+                <Badge variant="outline" className="bg-green-50 text-green-700">
+                  {user.full_name || user.email}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -161,8 +193,8 @@ const Index = () => {
       <footer className="border-t bg-white/50 backdrop-blur-sm mt-16">
         <div className="container mx-auto px-6 py-8">
           <div className="text-center text-gray-600">
-            <p className="mb-2">Powered by Tavily • Keywords AI • Mem0 • Superdev</p>
-            <p className="text-sm">Built for hackathon excellence 🚀</p>
+            <p className="mb-2">Powered by Advanced AI Technology</p>
+            <p className="text-sm">Enterprise-grade competitive intelligence platform</p>
           </div>
         </div>
       </footer>
