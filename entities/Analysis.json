@@ -1,0 +1,54 @@
+{
+  "name": "Analysis",
+  "description": "Competitive analysis results",
+  "properties": {
+    "company_id": {
+      "type": "string",
+      "description": "Reference to the analyzed company"
+    },
+    "competitors": {
+      "type": "array",
+      "description": "List of identified competitors",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "website": {"type": "string"},
+          "market_share": {"type": "number"},
+          "strengths": {"type": "array", "items": {"type": "string"}},
+          "weaknesses": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "market_trends": {
+      "type": "array",
+      "description": "Identified market trends",
+      "items": {
+        "type": "object",
+        "properties": {
+          "trend": {"type": "string"},
+          "impact": {"type": "string"},
+          "confidence": {"type": "number"}
+        }
+      }
+    },
+    "market_gaps": {
+      "type": "array",
+      "description": "Identified market opportunities",
+      "items": {
+        "type": "string"
+      }
+    },
+    "positioning_strategy": {
+      "type": "string",
+      "description": "Recommended market positioning strategy"
+    },
+    "competitive_advantages": {
+      "type": "array",
+      "description": "Identified competitive advantages",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

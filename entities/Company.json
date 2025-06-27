@@ -1,0 +1,31 @@
+{
+  "name": "Company",
+  "description": "Company information for competitive analysis",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Company name"
+    },
+    "website_url": {
+      "type": "string",
+      "description": "Company website URL"
+    },
+    "product_description": {
+      "type": "string",
+      "description": "Brief description of the company's main product/service"
+    },
+    "market_category": {
+      "type": "string",
+      "description": "Market category (SaaS, E-commerce, FinTech, etc.)"
+    },
+    "analysis_status": {
+      "type": "string",
+      "description": "Current analysis status",
+      "enum": ["pending", "in_progress", "completed", "failed"]
+    },
+    "scraped_data": {
+      "type": "object",
+      "description": "Raw scraped data from company website"
+    }
+  }
+}

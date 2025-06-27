@@ -1,0 +1,47 @@
+{
+  "name": "MarketingAsset",
+  "description": "Generated marketing assets (scripts, audio, images)",
+  "properties": {
+    "company_id": {
+      "type": "string",
+      "description": "Reference to the company"
+    },
+    "analysis_id": {
+      "type": "string",
+      "description": "Reference to the analysis"
+    },
+    "script_content": {
+      "type": "string",
+      "description": "Generated marketing script"
+    },
+    "audio_url": {
+      "type": "string",
+      "description": "URL to generated audio file"
+    },
+    "images": {
+      "type": "array",
+      "description": "Generated images for the ad",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": {"type": "string"},
+          "prompt": {"type": "string"},
+          "timestamp": {"type": "number"}
+        }
+      }
+    },
+    "duration": {
+      "type": "number",
+      "description": "Duration in seconds (target: 30)"
+    },
+    "style": {
+      "type": "string",
+      "description": "Ad style (professional, creative, bold, etc.)"
+    },
+    "status": {
+      "type": "string",
+      "description": "Generation status",
+      "enum": ["pending", "generating", "completed", "failed"]
+    }
+  }
+}
