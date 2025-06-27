@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User } from '@/entities';
+import { User, Session } from '@/entities';
 
 interface SessionData {
   appState?: string;
@@ -46,6 +46,25 @@ export const useSession = () => {
     return null;
   };
 
+  const loadActiveSession = async () => {
+    try {
+      if (!user) return null;
+      
+      const activeSessions = await Session.filter({ is_active: true }, '-last_accessed', 1);
+      if (activeSessions.length > 0) {
+        const session = activeSessions[0];
+        return {
+          appState: session.app_state,
+          companyData: session.company_data,
+          analysisData: session.analysis_data
+        };
+      }
+    } catch (error) {
+      console.error('Failed to load active session:', error);
+    }
+    return null;
+  };
+
   const clearSession = () => {
     localStorage.removeItem('competeiq_session');
   };
@@ -70,6 +89,7 @@ export const useSession = () => {
     sessionLoaded,
     saveSession,
     loadSession,
+    loadActiveSession,
     clearSession
   };
 };

@@ -1,0 +1,32 @@
+{
+  "name": "Session",
+  "description": "User sessions for competitive analysis",
+  "properties": {
+    "session_name": {
+      "type": "string",
+      "description": "User-defined name for the session"
+    },
+    "company_data": {
+      "type": "object",
+      "description": "Company information for this session"
+    },
+    "analysis_data": {
+      "type": "object",
+      "description": "Analysis results for this session"
+    },
+    "app_state": {
+      "type": "string",
+      "description": "Current state of the analysis",
+      "enum": ["input", "analyzing", "results", "generating"]
+    },
+    "last_accessed": {
+      "type": "string",
+      "description": "Last time this session was accessed"
+    },
+    "is_active": {
+      "type": "boolean",
+      "description": "Whether this is the currently active session",
+      "default": false
+    }
+  }
+}

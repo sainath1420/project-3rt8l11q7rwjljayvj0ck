@@ -3,12 +3,14 @@ import { CompanyAnalysisForm } from '@/components/CompanyAnalysisForm';
 import { AnalysisProgress } from '@/components/AnalysisProgress';
 import { ResultsDashboard } from '@/components/ResultsDashboard';
 import { AssetGeneration } from '@/components/AssetGeneration';
+import { SessionsDashboard } from '@/components/SessionsDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Brain, Target, TrendingUp, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Brain, Target, TrendingUp, Zap, History } from 'lucide-react';
 import { useSession } from '@/hooks/useSession';
 
-export type AppState = 'input' | 'analyzing' | 'results' | 'generating';
+export type AppState = 'input' | 'analyzing' | 'results' | 'generating' | 'sessions';
 
 export interface CompanyData {
   name: string;
@@ -30,17 +32,30 @@ const Index = () => {
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   
-  const { user, sessionLoaded, saveSession, loadSession, clearSession } = useSession();
+  const { user, sessionLoaded, saveSession, loadSession, loadActiveSession, clearSession } = useSession();
 
   // Restore session when user is loaded
   useEffect(() => {
     if (sessionLoaded && user) {
-      const session = loadSession();
-      if (session) {
-        if (session.companyData) setCompanyData(session.companyData);
-        if (session.analysisData) setAnalysisData(session.analysisData);
-        if (session.appState) setAppState(session.appState as AppState);
-      }
+      const restoreSession = async () => {
+        // First try to load active session from database
+        const activeSession = await loadActiveSession();
+        if (activeSession) {
+          if (activeSession.companyData) setCompanyData(activeSession.companyData);
+          if (activeSession.analysisData) setAnalysisData(activeSession.analysisData);
+          if (activeSession.appState) setAppState(activeSession.appState as AppState);
+        } else {
+          // Fallback to localStorage session
+          const session = loadSession();
+          if (session) {
+            if (session.companyData) setCompanyData(session.companyData);
+            if (session.analysisData) setAnalysisData(session.analysisData);
+            if (session.appState) setAppState(session.appState as AppState);
+          }
+        }
+      };
+      
+      restoreSession();
     }
   }, [sessionLoaded, user]);
 
@@ -76,6 +91,12 @@ const Index = () => {
     clearSession();
   };
 
+  const handleLoadSession = (sessionCompanyData: CompanyData | null, sessionAnalysisData: AnalysisData | null, sessionAppState: AppState) => {
+    setCompanyData(sessionCompanyData);
+    setAnalysisData(sessionAnalysisData);
+    setAppState(sessionAppState);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
       {/* Header */}
@@ -92,6 +113,16 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {user && appState !== 'sessions' && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setAppState('sessions')}
+                  className="text-gray-600"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  Sessions
+                </Button>
+              )}
               <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                 <Zap className="w-3 h-3 mr-1" />
                 Enterprise Ready
@@ -108,6 +139,16 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
+        {appState === 'sessions' && (
+          <SessionsDashboard
+            currentCompanyData={companyData}
+            currentAnalysisData={analysisData}
+            currentAppState={appState}
+            onLoadSession={handleLoadSession}
+            onBack={() => setAppState('input')}
+          />
+        )}
+
         {appState === 'input' && (
           <div className="max-w-4xl mx-auto">
             {/* Hero Section */}
