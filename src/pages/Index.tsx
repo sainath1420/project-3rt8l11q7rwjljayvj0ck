@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Brain, Target, TrendingUp, Zap, History } from 'lucide-react';
 import { useSession } from '@/hooks/useSession';
+import { CompeteIQLogo } from '@/components/CompeteIQLogo';
 
 export type AppState = 'input' | 'analyzing' | 'results' | 'generating' | 'sessions';
 
@@ -104,9 +105,7 @@ const Index = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Brain className="w-6 h-6 text-white" />
-              </div>
+              <CompeteIQLogo size={40} />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">CompeteIQ</h1>
                 <p className="text-sm text-gray-500">AI-Powered Competitive Intelligence</p>
