@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowLeft, Save, Trash2, Clock, Building, Eye, Plus } from 'lucide-react';
-import { Session } from '@/entities';
+import { appwriteDB, AppwriteSession } from '@/lib/appwrite/database';
+import { useAppwriteAuth } from '@/hooks/useAppwriteAuth';
 import { CompanyData, AnalysisData, AppState } from '@/pages/Index';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,17 +18,6 @@ interface SessionsDashboardProps {
   onBack: () => void;
 }
 
-interface SessionRecord {
-  id: string;
-  session_name: string;
-  company_data: CompanyData;
-  analysis_data: AnalysisData | null;
-  app_state: AppState;
-  last_accessed: string;
-  is_active: boolean;
-  created_at: string;
-}
-
 export const SessionsDashboard: React.FC<SessionsDashboardProps> = ({
   currentCompanyData,
   currentAnalysisData,
@@ -35,20 +25,25 @@ export const SessionsDashboard: React.FC<SessionsDashboardProps> = ({
   onLoadSession,
   onBack
 }) => {
-  const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const [sessions, setSessions] = useState<AppwriteSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [sessionName, setSessionName] = useState('');
+  const { user } = useAppwriteAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    loadSessions();
-  }, []);
+    if (user) {
+      loadSessions();
+    }
+  }, [user]);
 
   const loadSessions = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      const sessionsList = await Session.list('-last_accessed', 50);
+      const sessionsList = await appwriteDB.getUserSessions(user.$id, 50);
       setSessions(sessionsList);
     } catch (error) {
       console.error('Failed to load sessions:', error);
@@ -72,7 +67,7 @@ export const SessionsDashboard: React.FC<SessionsDashboardProps> = ({
       return;
     }
 
-    if (!currentCompanyData) {
+    if (!currentCompanyData || !user) {
       toast({
         title: "Error",
         description: "No session data to save",
@@ -82,20 +77,16 @@ export const SessionsDashboard: React.FC<SessionsDashboardProps> = ({
     }
 
     try {
-      // Mark all other sessions as inactive
-      const activeSessions = sessions.filter(s => s.is_active);
-      for (const session of activeSessions) {
-        await Session.update(session.id, { is_active: false });
-      }
-
-      // Create new session
-      await Session.create({
+      await appwriteDB.setActiveSession(user.$id, ''); // Deactivate all sessions first
+      
+      await appwriteDB.createSession({
         session_name: sessionName.trim(),
         company_data: currentCompanyData,
         analysis_data: currentAnalysisData,
         app_state: currentAppState,
         last_accessed: new Date().toISOString(),
-        is_active: true
+        is_active: true,
+        user_id: user.$id
       });
 
       toast({
@@ -116,22 +107,12 @@ export const SessionsDashboard: React.FC<SessionsDashboardProps> = ({
     }
   };
 
-  const loadSession = async (session: SessionRecord) => {
+  const loadSession = async (session: AppwriteSession) => {
+    if (!user) return;
+
     try {
-      // Mark all sessions as inactive
-      const activeSessions = sessions.filter(s => s.is_active);
-      for (const activeSession of activeSessions) {
-        await Session.update(activeSession.id, { is_active: false });
-      }
-
-      // Mark this session as active and update last accessed
-      await Session.update(session.id, {
-        is_active: true,
-        last_accessed: new Date().toISOString()
-      });
-
-      // Load the session data
-      onLoadSession(session.company_data, session.analysis_data, session.app_state);
+      await appwriteDB.setActiveSession(user.$id, session.$id!);
+      onLoadSession(session.company_data, session.analysis_data, session.app_state as AppState);
 
       toast({
         title: "Success",
@@ -153,7 +134,7 @@ export const SessionsDashboard: React.FC<SessionsDashboardProps> = ({
     }
 
     try {
-      await Session.delete(sessionId);
+      await appwriteDB.deleteSession(sessionId);
       toast({
         title: "Success",
         description: "Session deleted successfully"
@@ -271,7 +252,7 @@ export const SessionsDashboard: React.FC<SessionsDashboardProps> = ({
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sessions.map((session) => (
             <Card 
-              key={session.id} 
+              key={session.$id} 
               className={`border-0 shadow-lg bg-white/80 backdrop-blur-sm transition-all duration-200 hover:shadow-xl ${
                 session.is_active ? 'ring-2 ring-blue-200' : ''
               }`}
@@ -287,20 +268,20 @@ export const SessionsDashboard: React.FC<SessionsDashboardProps> = ({
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Building className="w-4 h-4" />
-                  <span className="truncate">{session.company_data.name}</span>
+                  <span className="truncate">{session.company_data?.name || 'Unknown'}</span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Status:</span>
-                    <Badge variant="outline" className={getStateColor(session.app_state)}>
+                    <Badge variant="outline" className={getStateColor(session.app_state as AppState)}>
                       {session.app_state}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Category:</span>
-                    <span className="text-sm font-medium">{session.company_data.market_category}</span>
+                    <span className="text-sm font-medium">{session.company_data?.market_category || 'N/A'}</span>
                   </div>
                   <div className="flex items-center space-x-1 text-xs text-gray-500">
                     <Clock className="w-3 h-3" />
@@ -318,7 +299,7 @@ export const SessionsDashboard: React.FC<SessionsDashboardProps> = ({
                     Load
                   </Button>
                   <Button 
-                    onClick={() => deleteSession(session.id, session.session_name)}
+                    onClick={() => deleteSession(session.$id!, session.session_name)}
                     variant="outline"
                     size="sm"
                     className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
