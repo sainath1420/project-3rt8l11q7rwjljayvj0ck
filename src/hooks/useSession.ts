@@ -8,18 +8,14 @@ interface SessionData {
 }
 
 export const useSession = () => {
-  const [user, setUser] = useState<any>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
 
   const saveSession = (data: SessionData) => {
-    if (user) {
-      const session = {
-        ...data,
-        timestamp: Date.now(),
-        userId: user.id
-      };
-      localStorage.setItem('competeiq_session', JSON.stringify(session));
-    }
+    const session = {
+      ...data,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('competeiq_session', JSON.stringify(session));
   };
 
   const loadSession = (): SessionData | null => {
@@ -32,10 +28,10 @@ export const useSession = () => {
         const isValid = session.timestamp && 
           (Date.now() - session.timestamp) < 24 * 60 * 60 * 1000;
         
-        if (isValid && session.userId === user?.id) {
+        if (isValid) {
           return session;
         } else {
-          // Clear expired or invalid session
+          // Clear expired session
           clearSession();
         }
       }
@@ -71,13 +67,11 @@ export const useSession = () => {
       setSessionLoaded(true);
     }
   };
-
   useEffect(() => {
-    initializeSession();
+    setSessionLoaded(true);
   }, []);
 
   return {
-    user,
     sessionLoaded,
     saveSession,
     loadSession,

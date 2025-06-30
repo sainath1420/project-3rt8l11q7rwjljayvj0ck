@@ -72,6 +72,22 @@ export const SessionsDashboard: React.FC<SessionsDashboardProps> = ({
               </Button>
             </div>
           )}
+=======
+        <div></div>
+      </div>
+
+      {/* No Sessions Message */}
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardContent className="p-12 text-center">
+          <Plus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Session Management</h3>
+          <p className="text-gray-600 mb-4">
+            Session storage and management features will be available soon. For now, you can use the application without persistent sessions.
+          </p>
+          <Button onClick={onBack} variant="outline">
+            Start New Analysis
+          </Button>
+>>>>>>> eab3e2761c148ef083410f9b3ca8a5056de8c483
         </CardContent>
       </Card>
     </div>
