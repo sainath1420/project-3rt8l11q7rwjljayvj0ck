@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { User, Session } from '@/entities';
 
 interface SessionData {
   appState?: string;
@@ -48,19 +47,12 @@ export const useSession = () => {
 
   const loadActiveSession = async () => {
     try {
-      if (!user) return null;
-      
-      const activeSessions = await Session.filter({ is_active: true }, '-last_accessed', 1);
-      if (activeSessions.length > 0) {
-        const session = activeSessions[0];
-        return {
-          appState: session.app_state,
-          companyData: session.company_data,
-          analysisData: session.analysis_data
-        };
-      }
+      // For now, just return the localStorage session
+      // In the future, this could be enhanced to sync with backend
+      return loadSession();
     } catch (error) {
       console.error('Failed to load active session:', error);
+      // Don't throw error, just return null to prevent app crash
     }
     return null;
   };
@@ -71,11 +63,11 @@ export const useSession = () => {
 
   const initializeSession = async () => {
     try {
-      const currentUser = await User.me();
-      setUser(currentUser);
+      // For now, just set session as loaded
+      // In the future, this could check Appwrite authentication
       setSessionLoaded(true);
     } catch (error) {
-      console.log('User not authenticated');
+      console.log('Session initialization failed:', error);
       setSessionLoaded(true);
     }
   };

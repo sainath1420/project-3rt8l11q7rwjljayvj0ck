@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Target, TrendingUp, Brain, History, Zap, LogOut } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useAppwriteAuth } from '@/hooks/useAppwriteAuth';
+import { CompeteIQLogo } from '@/components/CompeteIQLogo';
 import { CompanyAnalysisForm } from '@/components/CompanyAnalysisForm';
 import { AnalysisProgress } from '@/components/AnalysisProgress';
 import { ResultsDashboard } from '@/components/ResultsDashboard';
 import { AssetGeneration } from '@/components/AssetGeneration';
 import { SessionsDashboard } from '@/components/SessionsDashboard';
 import { LoginForm } from '@/components/auth/LoginForm';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Brain, Target, TrendingUp, Zap, History, LogOut } from 'lucide-react';
-import { useAppwriteAuth } from '@/hooks/useAppwriteAuth';
-import { appwriteDB } from '@/lib/appwrite/database';
-import { CompeteIQLogo } from '@/components/CompeteIQLogo';
-import { useToast } from '@/hooks/use-toast';
 
 export type AppState = 'input' | 'analyzing' | 'results' | 'generating' | 'sessions';
 
@@ -21,6 +20,7 @@ export interface CompanyData {
   website_url: string;
   product_description: string;
   market_category: string;
+  user_name?: string;
 }
 
 export interface AnalysisData {
@@ -35,66 +35,10 @@ const Index = () => {
   const [appState, setAppState] = useState<AppState>('input');
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
-  
-  const { user, loading, authenticated, logout, checkAuth } = useAppwriteAuth();
   const { toast } = useToast();
+  const { user, loading, authenticated, logout, checkAuth } = useAppwriteAuth();
 
-  // Restore session when user is authenticated
-  useEffect(() => {
-    if (authenticated && user) {
-      restoreActiveSession();
-    }
-  }, [authenticated, user]);
-
-  const restoreActiveSession = async () => {
-    try {
-      if (!user) return;
-      
-      const activeSession = await appwriteDB.getActiveSession(user.$id);
-      if (activeSession) {
-        setCompanyData(activeSession.company_data);
-        setAnalysisData(activeSession.analysis_data);
-        setAppState(activeSession.app_state as AppState);
-      }
-    } catch (error) {
-      console.error('Failed to restore session:', error);
-    }
-  };
-
-  const saveCurrentSession = async () => {
-    if (!user || !companyData) return;
-
-    try {
-      // Deactivate all existing sessions
-      const userSessions = await appwriteDB.getUserSessions(user.$id);
-      for (const session of userSessions) {
-        if (session.is_active) {
-          await appwriteDB.updateSession(session.$id!, { is_active: false });
-        }
-      }
-
-      // Create new active session
-      await appwriteDB.createSession({
-        session_name: `${companyData.name} - ${new Date().toLocaleDateString()}`,
-        company_data: companyData,
-        analysis_data: analysisData,
-        app_state: appState,
-        last_accessed: new Date().toISOString(),
-        is_active: true,
-        user_id: user.$id
-      });
-    } catch (error) {
-      console.error('Failed to save session:', error);
-    }
-  };
-
-  // Save session whenever state changes
-  useEffect(() => {
-    if (authenticated && user && companyData) {
-      saveCurrentSession();
-    }
-  }, [appState, companyData, analysisData, authenticated, user]);
-
+  // Remove all session management - just use local state
   const handleAnalysisStart = (data: CompanyData) => {
     setCompanyData(data);
     setAppState('analyzing');
@@ -191,6 +135,11 @@ const Index = () => {
                   <Badge variant="outline" className="bg-green-50 text-green-700">
                     {user.name || user.email}
                   </Badge>
+                  {user.$id === 'demo_user' && (
+                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                      Demo Mode
+                    </Badge>
+                  )}
                   <Button 
                     variant="ghost" 
                     size="sm"

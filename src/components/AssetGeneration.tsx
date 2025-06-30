@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, FileText, Image, Volume2, Play, Download, RefreshCw } from 'lucide-react';
 import { CompanyData, AnalysisData } from '@/pages/Index';
-import { competitiveAPI } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 
 interface AssetGenerationProps {
   companyData: CompanyData;
@@ -32,6 +32,7 @@ export const AssetGeneration: React.FC<AssetGenerationProps> = ({
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
 
   useEffect(() => {
     generateAssets();
@@ -46,29 +47,41 @@ export const AssetGeneration: React.FC<AssetGenerationProps> = ({
       setCurrentStep('script');
       setProgress(10);
       
-      const script = await competitiveAPI.generateMarketingScript(
-        companyData.name,
-        analysisData
-      );
+      // For now, we'll use a mock analysis ID since we don't have one from the previous step
+      // In a real implementation, this would be passed from the analysis results
+      const mockAnalysisId = 'mock-analysis-id';
+      setAnalysisId(mockAnalysisId);
       
-      setAssets(prev => ({ ...prev, script }));
+      const scriptResult = await apiClient.generateScript({
+        analysis_id: mockAnalysisId,
+        style: 'professional',
+        duration: 30
+      });
+      
+      setAssets(prev => ({ ...prev, script: scriptResult.script }));
       setProgress(40);
 
       // Step 2: Generate Images
       setCurrentStep('images');
       
-      const images = await competitiveAPI.generateAdImages(script, companyData.name);
-      setAssets(prev => ({ ...prev, images }));
+      const imagesResult = await apiClient.generateImages({
+        script: scriptResult.script,
+        company_name: companyData.name,
+        style: 'professional'
+      });
+      
+      setAssets(prev => ({ ...prev, images: imagesResult.images }));
       setProgress(70);
 
-      // Step 3: Generate Audio (simulated for now)
+      // Step 3: Generate Audio
       setCurrentStep('audio');
       
-      // Simulate audio generation
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const audioUrl = `https://example.com/audio/${companyData.name.toLowerCase()}-ad.mp3`;
+      const audioResult = await apiClient.generateAudio({
+        script: scriptResult.script,
+        voice: 'professional_male'
+      });
       
-      setAssets(prev => ({ ...prev, audioUrl }));
+      setAssets(prev => ({ ...prev, audioUrl: audioResult.audio_url }));
       setProgress(100);
       setCurrentStep('complete');
 
@@ -202,13 +215,23 @@ export const AssetGeneration: React.FC<AssetGenerationProps> = ({
               {assets.images.length > 0 ? (
                 <div className="grid grid-cols-2 gap-4">
                   {assets.images.map((image, index) => (
-                    <div key={index} className="space-y-2">
+                    <div key={index} className="relative group">
                       <img 
                         src={image.url} 
-                        alt={`Ad visual ${index + 1}`}
+                        alt={`Generated image ${index + 1}`}
                         className="w-full h-32 object-cover rounded-lg"
                       />
-                      <p className="text-xs text-gray-500">{image.timestamp}s - {image.prompt}</p>
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center">
+                        <Button 
+                          size="sm" 
+                          variant="secondary"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => window.open(image.url, '_blank')}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -244,12 +267,21 @@ export const AssetGeneration: React.FC<AssetGenerationProps> = ({
             </CardHeader>
             <CardContent>
               {assets.audioUrl ? (
-                <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <audio controls className="w-full">
                     <source src={assets.audioUrl} type="audio/mpeg" />
                     Your browser does not support the audio element.
                   </audio>
-                  <p className="text-sm text-gray-600">30-second professional narration</p>
+                  <div className="mt-3 flex justify-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(assets.audioUrl, '_blank')}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Audio
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="text-gray-500 text-center py-8">
@@ -260,80 +292,55 @@ export const AssetGeneration: React.FC<AssetGenerationProps> = ({
           </Card>
         </div>
 
-        {/* Preview & Actions */}
+        {/* Preview Section */}
         <div className="space-y-6">
-          {/* Ad Preview */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle>30-Second Ad Preview</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <Play className="w-5 h-5 text-red-600" />
+                <span>Ad Preview</span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {currentStep === 'complete' ? (
                 <div className="space-y-4">
-                  <div className="bg-black rounded-lg aspect-video flex items-center justify-center">
-                    <div className="text-white text-center">
-                      <Play className="w-12 h-12 mx-auto mb-2" />
-                      <p>Click to preview your ad</p>
-                    </div>
+                  <div className="bg-black rounded-lg p-4 text-white text-center">
+                    <p className="text-sm opacity-75">30-Second Ad Preview</p>
+                    <p className="text-lg font-semibold mt-2">{companyData.name}</p>
                   </div>
                   
-                  <div className="flex space-x-2">
-                    <Button className="flex-1">
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-900">Generated Assets:</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="w-4 h-4 text-green-600" />
+                        <span className="text-sm">Script: {assets.script ? '✓ Generated' : 'Pending'}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Image className="w-4 h-4 text-green-600" />
+                        <span className="text-sm">Images: {assets.images.length} generated</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Volume2 className="w-4 h-4 text-green-600" />
+                        <span className="text-sm">Audio: {assets.audioUrl ? '✓ Generated' : 'Pending'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                       <Play className="w-4 h-4 mr-2" />
-                      Preview Ad
-                    </Button>
-                    <Button variant="outline">
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
+                      Play Full Ad
                     </Button>
                   </div>
                 </div>
               ) : (
-                <div className="bg-gray-100 rounded-lg aspect-video flex items-center justify-center">
-                  <div className="text-gray-500 text-center">
-                    <div className="w-8 h-8 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                    <p>Generating your ad...</p>
-                  </div>
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-gray-600">Generating your marketing assets...</p>
+                  <p className="text-sm text-gray-500 mt-2">This may take a few minutes</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Asset Summary */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle>Generated Assets</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <FileText className="w-5 h-5 text-purple-600" />
-                  <span>Marketing Script</span>
-                </div>
-                <Badge variant={assets.script ? "default" : "secondary"}>
-                  {assets.script ? "Ready" : "Pending"}
-                </Badge>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Image className="w-5 h-5 text-blue-600" />
-                  <span>Visual Assets ({assets.images.length}/4)</span>
-                </div>
-                <Badge variant={assets.images.length > 0 ? "default" : "secondary"}>
-                  {assets.images.length > 0 ? "Ready" : "Pending"}
-                </Badge>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Volume2 className="w-5 h-5 text-green-600" />
-                  <span>Audio Narration</span>
-                </div>
-                <Badge variant={assets.audioUrl ? "default" : "secondary"}>
-                  {assets.audioUrl ? "Ready" : "Pending"}
-                </Badge>
-              </div>
             </CardContent>
           </Card>
 
@@ -341,12 +348,14 @@ export const AssetGeneration: React.FC<AssetGenerationProps> = ({
           {error && (
             <Card className="border-red-200 bg-red-50">
               <CardContent className="p-4">
-                <p className="text-red-700">{error}</p>
+                <p className="text-red-700 text-sm">{error}</p>
                 <Button 
                   onClick={regenerateAssets}
-                  variant="outline" 
-                  className="mt-2 border-red-300 text-red-700"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
                 >
+                  <RefreshCw className="w-4 h-4 mr-2" />
                   Try Again
                 </Button>
               </CardContent>

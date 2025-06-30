@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Rocket, Globe, Target, Lightbulb } from 'lucide-react';
 import { CompanyData } from '@/pages/Index';
+import { useAppwriteAuth } from '@/hooks/useAppwriteAuth';
 
 interface CompanyAnalysisFormProps {
   onSubmit: (data: CompanyData) => void;
@@ -51,6 +52,7 @@ const exampleCompanies = [
 ];
 
 export const CompanyAnalysisForm: React.FC<CompanyAnalysisFormProps> = ({ onSubmit }) => {
+  const { user } = useAppwriteAuth();
   const [formData, setFormData] = useState<CompanyData>({
     name: '',
     website_url: '',
@@ -67,7 +69,14 @@ export const CompanyAnalysisForm: React.FC<CompanyAnalysisFormProps> = ({ onSubm
     }
 
     setIsLoading(true);
-    onSubmit(formData);
+    
+    // Include the user's name in the form data
+    const formDataWithUser = {
+      ...formData,
+      user_name: user?.name || user?.email || 'Unknown User'
+    };
+    
+    onSubmit(formDataWithUser);
   };
 
   const handleExampleClick = (example: typeof exampleCompanies[0]) => {

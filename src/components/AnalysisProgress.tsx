@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckCircle, Clock, AlertCircle, Globe, Users, TrendingUp, Target, Lightbulb } from 'lucide-react';
 import { CompanyData, AnalysisData } from '@/pages/Index';
-import { competitiveAPI, AnalysisProgress as ProgressType } from '@/lib/api';
+import { apiClient, AnalysisProgress as ProgressType } from '@/lib/api';
 
 interface AnalysisProgressProps {
   companyData: CompanyData;
@@ -36,13 +36,6 @@ const analysisSteps = [
     color: 'text-green-600'
   },
   {
-    id: 'weakness_analysis',
-    name: 'Weakness Analysis',
-    description: 'Finding competitor weaknesses and market gaps',
-    icon: Target,
-    color: 'text-orange-600'
-  },
-  {
     id: 'market_positioning',
     name: 'Market Positioning',
     description: 'Developing optimal positioning strategy',
@@ -57,48 +50,93 @@ export const AnalysisProgress: React.FC<AnalysisProgressProps> = ({
   onBack
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [stepProgress, setStepProgress] = useState<Record<string, ProgressType>>({});
+  const [stepProgress, setStepProgress] = useState<Record<string, any>>({});
   const [overallProgress, setOverallProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
 
   useEffect(() => {
     const runAnalysis = async () => {
       try {
-        // Set up progress callback
-        competitiveAPI.setProgressCallback((progress) => {
-          setStepProgress(prev => ({
-            ...prev,
-            [progress.step.toLowerCase().replace(' ', '_')]: progress
-          }));
-
-          // Update current step
-          const stepIndex = analysisSteps.findIndex(step => 
-            step.id === progress.step.toLowerCase().replace(' ', '_')
-          );
-          if (stepIndex !== -1) {
-            setCurrentStep(stepIndex);
+        console.log('🚀 Starting analysis for company:', companyData);
+        
+        // Start the analysis
+        const result = await apiClient.analyzeCompany(companyData);
+        console.log('✅ Analysis started successfully:', result);
+        setAnalysisId(result.analysis_id);
+        
+        // Start polling for progress
+        const progressInterval = setInterval(async () => {
+          try {
+            console.log('📊 Polling for progress...');
+            const progress = await apiClient.getAnalysisProgress(result.analysis_id);
+            console.log('📈 Progress update:', progress);
+            
+            // Update step progress
+            const newStepProgress: Record<string, any> = {};
+            progress.steps.forEach((step: any) => {
+              newStepProgress[step.name] = {
+                step: step.name,
+                progress: step.progress,
+                status: step.status,
+                message: step.agent
+              };
+            });
+            
+            setStepProgress(newStepProgress);
+            
+            // Update current step
+            const currentStepIndex = analysisSteps.findIndex(step => 
+              step.id === progress.current_step
+            );
+            if (currentStepIndex !== -1) {
+              setCurrentStep(currentStepIndex);
+            }
+            
+            // Calculate overall progress
+            const completedSteps = progress.steps.filter((step: any) => step.status === 'completed').length;
+            const newOverallProgress = (completedSteps / analysisSteps.length) * 100;
+            setOverallProgress(newOverallProgress);
+            
+            // Check if analysis is complete
+            if (progress.status === 'completed') {
+              console.log('🎉 Analysis completed!');
+              clearInterval(progressInterval);
+              setIsComplete(true);
+              setOverallProgress(100);
+              
+              // Get final results
+              console.log('📋 Fetching final results...');
+              const results = await apiClient.getAnalysisResults(result.analysis_id);
+              console.log('📊 Final results:', results);
+              
+              // Wait a moment for the user to see completion, then proceed
+              setTimeout(() => {
+                onComplete({
+                  competitors: results.competitors,
+                  market_trends: results.market_trends,
+                  market_gaps: results.market_gaps,
+                  positioning_strategy: results.positioning_strategy,
+                  competitive_advantages: results.competitive_advantages
+                });
+              }, 2000);
+            } else if (progress.status === 'failed') {
+              console.error('❌ Analysis failed');
+              clearInterval(progressInterval);
+              setError('Analysis failed. Please try again.');
+            }
+            
+          } catch (err) {
+            console.error('❌ Progress polling failed:', err);
           }
-
-          // Calculate overall progress
-          const completedSteps = Object.values(stepProgress).filter(p => p.status === 'completed').length;
-          const newOverallProgress = (completedSteps / analysisSteps.length) * 100;
-          setOverallProgress(newOverallProgress);
-        });
-
-        // Run the analysis
-        const result = await competitiveAPI.analyzeCompany(companyData);
+        }, 2000); // Poll every 2 seconds
         
-        setIsComplete(true);
-        setOverallProgress(100);
-        
-        // Wait a moment for the user to see completion, then proceed
-        setTimeout(() => {
-          onComplete(result);
-        }, 2000);
+        // Cleanup interval on unmount
+        return () => clearInterval(progressInterval);
 
       } catch (err) {
-        console.error('Analysis failed:', err);
+        console.error('❌ Analysis failed:', err);
         setError('Analysis failed. Please try again.');
       }
     };
@@ -198,44 +236,28 @@ export const AnalysisProgress: React.FC<AnalysisProgressProps> = ({
         {analysisSteps.map((step, index) => {
           const status = getStepStatus(step.id);
           const progress = getStepProgress(step.id);
-          const Icon = step.icon;
+          const IconComponent = step.icon;
 
           return (
-            <Card 
-              key={step.id} 
-              className={`border-0 shadow-md transition-all duration-300 ${
-                status === 'in_progress' ? 'ring-2 ring-blue-200 bg-blue-50/50' : 'bg-white/60'
-              } backdrop-blur-sm`}
-            >
+            <Card key={step.id} className="border-0 shadow-md bg-white/60 backdrop-blur-sm">
               <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    status === 'completed' ? 'bg-green-100' :
-                    status === 'in_progress' ? 'bg-blue-100' :
-                    status === 'failed' ? 'bg-red-100' : 'bg-gray-100'
-                  }`}>
-                    <Icon className={`w-6 h-6 ${step.color}`} />
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-gray-900">{step.name}</h3>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline" className={getStatusColor(status)}>
-                          {status.replace('_', ' ')}
-                        </Badge>
-                        {getStatusIcon(status)}
-                      </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center ${step.color}`}>
+                      <IconComponent className="w-5 h-5" />
                     </div>
-                    
-                    <p className="text-gray-600 text-sm mb-3">{step.description}</p>
-                    
-                    {status === 'in_progress' && (
-                      <div className="space-y-1">
-                        <Progress value={progress} className="h-2" />
-                        <p className="text-xs text-gray-500">{progress}% complete</p>
-                      </div>
-                    )}
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{step.name}</h3>
+                      <p className="text-sm text-gray-600">{step.description}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-24">
+                      <Progress value={progress} className="h-2" />
+                    </div>
+                    <Badge className={getStatusColor(status)}>
+                      {getStatusIcon(status)}
+                    </Badge>
                   </div>
                 </div>
               </CardContent>
@@ -244,19 +266,11 @@ export const AnalysisProgress: React.FC<AnalysisProgressProps> = ({
         })}
       </div>
 
-      {/* Completion Message */}
-      {isComplete && (
-        <Card className="mt-8 border-green-200 bg-green-50">
-          <CardContent className="p-6 text-center">
-            <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-green-800 mb-2">
-              Analysis Complete!
-            </h3>
-            <p className="text-green-700">
-              Redirecting to results dashboard...
-            </p>
-          </CardContent>
-        </Card>
+      {/* Analysis ID for debugging */}
+      {analysisId && (
+        <div className="mt-8 text-center">
+          <p className="text-xs text-gray-500">Analysis ID: {analysisId}</p>
+        </div>
       )}
     </div>
   );

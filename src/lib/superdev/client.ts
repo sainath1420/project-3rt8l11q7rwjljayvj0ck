@@ -1,10 +1,13 @@
 import { createSuperdevClient } from "@superdevhq/client";
 
-export const superdevClient = createSuperdevClient({
-  appId: import.meta.env.VITE_APP_ID,
-  requiresAuth: true,
-  baseUrl: import.meta.env.VITE_SUPERDEV_BASE_URL,
-  loginUrl: `${import.meta.env.VITE_SUPERDEV_BASE_URL}/auth/app-login?app_id=${
-    import.meta.env.VITE_APP_ID
-  }`,
-});
+// Only create Superdev client if environment variables are set
+const appId = import.meta.env.VITE_APP_ID;
+const baseUrl = import.meta.env.VITE_SUPERDEV_BASE_URL;
+
+export const superdevClient = appId && baseUrl 
+  ? createSuperdevClient({
+      appId,
+      requiresAuth: false,
+      baseUrl,
+    })
+  : null;
