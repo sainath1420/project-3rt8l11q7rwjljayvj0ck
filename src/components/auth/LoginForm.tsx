@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Mail, Lock, User, Chrome, AlertCircle } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { appwriteAuth } from '@/lib/appwrite/auth';
 import { CompeteIQLogo } from '@/components/CompeteIQLogo';
 
@@ -23,19 +23,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     password: '', 
     confirmPassword: '' 
   });
-
-  const handleGoogleLogin = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      await appwriteAuth.loginWithGoogle();
-      // OAuth redirect will handle the rest
-    } catch (err: any) {
-      setError(err.message || 'Google login failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,26 +98,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-
-          {/* Google Login Button */}
-          <Button
-            onClick={handleGoogleLogin}
-            disabled={isLoading}
-            className="w-full mb-6 h-12 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-            variant="outline"
-          >
-            <Chrome className="w-5 h-5 mr-2" />
-            Continue with Google
-          </Button>
-
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500">Or continue with email</span>
-            </div>
-          </div>
 
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">

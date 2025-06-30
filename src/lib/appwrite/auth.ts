@@ -10,19 +10,6 @@ export interface AppwriteUser {
 }
 
 export class AppwriteAuth {
-  // Login with Google OAuth
-  async loginWithGoogle() {
-    try {
-      return await account.createOAuth2Session('google', 
-        window.location.origin, // Success URL
-        window.location.origin  // Failure URL
-      );
-    } catch (error) {
-      console.error('Google login failed:', error);
-      throw error;
-    }
-  }
-
   // Login with email and password
   async loginWithEmail(email: string, password: string) {
     try {
