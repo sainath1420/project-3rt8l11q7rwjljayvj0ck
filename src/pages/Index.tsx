@@ -4,15 +4,12 @@ import { AnalysisProgress } from '@/components/AnalysisProgress';
 import { ResultsDashboard } from '@/components/ResultsDashboard';
 import { AssetGeneration } from '@/components/AssetGeneration';
 import { SessionsDashboard } from '@/components/SessionsDashboard';
-import { LoginForm } from '@/components/auth/LoginForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Brain, Target, TrendingUp, Zap, History, LogOut } from 'lucide-react';
-import { useAppwriteAuth } from '@/hooks/useAppwriteAuth';
-import { appwriteDB } from '@/lib/appwrite/database';
+import { Brain, Target, TrendingUp, Zap, History } from 'lucide-react';
+import { useSession } from '@/hooks/useSession';
 import { CompeteIQLogo } from '@/components/CompeteIQLogo';
-import { useToast } from '@/hooks/use-toast';
 
 export type AppState = 'input' | 'analyzing' | 'results' | 'generating' | 'sessions';
 
@@ -36,64 +33,30 @@ const Index = () => {
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   
-  const { user, loading, authenticated, logout, checkAuth } = useAppwriteAuth();
-  const { toast } = useToast();
+  const { sessionLoaded, saveSession, loadSession, clearSession } = useSession();
 
-  // Restore session when user is authenticated
+  // Restore session when loaded
   useEffect(() => {
-    if (authenticated && user) {
-      restoreActiveSession();
-    }
-  }, [authenticated, user]);
-
-  const restoreActiveSession = async () => {
-    try {
-      if (!user) return;
-      
-      const activeSession = await appwriteDB.getActiveSession(user.$id);
-      if (activeSession) {
-        setCompanyData(activeSession.company_data);
-        setAnalysisData(activeSession.analysis_data);
-        setAppState(activeSession.app_state as AppState);
+    if (sessionLoaded) {
+      const session = loadSession();
+      if (session) {
+        if (session.companyData) setCompanyData(session.companyData);
+        if (session.analysisData) setAnalysisData(session.analysisData);
+        if (session.appState) setAppState(session.appState as AppState);
       }
-    } catch (error) {
-      console.error('Failed to restore session:', error);
     }
-  };
-
-  const saveCurrentSession = async () => {
-    if (!user || !companyData) return;
-
-    try {
-      // Deactivate all existing sessions
-      const userSessions = await appwriteDB.getUserSessions(user.$id);
-      for (const session of userSessions) {
-        if (session.is_active) {
-          await appwriteDB.updateSession(session.$id!, { is_active: false });
-        }
-      }
-
-      // Create new active session
-      await appwriteDB.createSession({
-        session_name: `${companyData.name} - ${new Date().toLocaleDateString()}`,
-        company_data: companyData,
-        analysis_data: analysisData,
-        app_state: appState,
-        last_accessed: new Date().toISOString(),
-        is_active: true,
-        user_id: user.$id
-      });
-    } catch (error) {
-      console.error('Failed to save session:', error);
-    }
-  };
+  }, [sessionLoaded]);
 
   // Save session whenever state changes
   useEffect(() => {
-    if (authenticated && user && companyData) {
-      saveCurrentSession();
+    if (sessionLoaded) {
+      saveSession({
+        appState,
+        companyData,
+        analysisData
+      });
     }
-  }, [appState, companyData, analysisData, authenticated, user]);
+  }, [appState, companyData, analysisData, sessionLoaded]);
 
   const handleAnalysisStart = (data: CompanyData) => {
     setCompanyData(data);
@@ -113,6 +76,7 @@ const Index = () => {
     setAppState('input');
     setCompanyData(null);
     setAnalysisData(null);
+    clearSession();
   };
 
   const handleLoadSession = (sessionCompanyData: CompanyData | null, sessionAnalysisData: AnalysisData | null, sessionAppState: AppState) => {
@@ -120,43 +84,6 @@ const Index = () => {
     setAnalysisData(sessionAnalysisData);
     setAppState(sessionAppState);
   };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setAppState('input');
-      setCompanyData(null);
-      setAnalysisData(null);
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to logout",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Show loading screen while checking authentication
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <CompeteIQLogo size={60} className="mx-auto mb-4" />
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login form if not authenticated
-  if (!authenticated) {
-    return <LoginForm onSuccess={checkAuth} />;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
@@ -186,21 +113,6 @@ const Index = () => {
                 <Zap className="w-3 h-3 mr-1" />
                 Enterprise Ready
               </Badge>
-              {user && (
-                <div className="flex items-center space-x-2">
-                  <Badge variant="outline" className="bg-green-50 text-green-700">
-                    {user.name || user.email}
-                  </Badge>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={handleLogout}
-                    className="text-gray-600 hover:text-red-600"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
         </div>
