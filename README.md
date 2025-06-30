@@ -122,11 +122,10 @@ In fast-paced markets, startups and marketing teams often lack the tools and tim
 
 ## 📌 Demo Links
 
-- 🔗 [Live Demo Coming Soon](#https://preview--eab3e27-3rt8l11q7rwjljayvj0ck.superdev.run/)
-- 📂 [GitHub Repository](#https://github.com/sainath1420/CompleteIQ)
-- 🎥 [Video Demo](#https://vimeo.com/1097505851)
+- 🔗 [Live Demo Coming Soon](https://preview--eab3e27-3rt8l11q7rwjljayvj0ck.superdev.run/)
+- 📂 [GitHub Repository](https://github.com/sainath1420/CompleteIQ)
+- 🎥 [Video Demo](https://vimeo.com/1097505851)
 
----
 
 ## 📄 License
 
